@@ -13,6 +13,7 @@ const moment = require('moment');
 const rateLimit = require('express-rate-limit');
 const redisStore = require('rate-limit-redis');
 const redis = require('ioredis');
+const fs = require('fs');
 
 const redisClient = new redis(config.redis_port, config.redis_server);
 const app = express();
@@ -55,12 +56,17 @@ app.get('/', function(req, res, next) {
     res.json({ code: 200, msg: '...' })
 })
 
-app.post('/upload', upload.single('upload'), function(req ,res, next) {
+app.post('/upload', upload.single('avatar'), function(req ,res, next) {
     const filepath = req.file.path;
-    const filetype = req.file.mimetype.split('/')[1];
-    const filename = moment().format('YYYY/MM/DD/') + md5(req.file.filename).toString() + '.' + filetype;
+    const filetype = req.file.originalname.split('.');
+    const filename = moment().format('YYYY/MM/DD/') + md5(req.file.filename).toString() + '.' + filetype[filetype.length-1];
     ossClient.put('pics/' + filename, filepath).then(function(r1) {
         console.log(`Upload Success: ${filename}`);
+        fs.unlink(filepath, function(err) {
+            if (err) {
+                console.log(err);
+            }
+        });
         res.json({ code: 200, hash: filename });
     }).catch(function(err) {
         console.log(err);
